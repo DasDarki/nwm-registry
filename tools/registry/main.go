@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,14 +109,9 @@ func publish(name string, file string, fields map[string]string, author string, 
 		return "", fmt.Errorf("repository must be a public GitHub URL like `https://github.com/owner/repo`")
 	}
 	subdir := strings.Trim(path.Clean("/"+strings.TrimSpace(fields["Subdirectory"])), "/")
-	manifestPath := path.Join(subdir, "recipe.toml")
-	content, err := githubContent(repositoryMatch[1], repositoryMatch[2], manifestPath)
+	manifest, manifestPath, err := loadRecipe(repositoryMatch[1], repositoryMatch[2], subdir)
 	if err != nil {
 		return "", err
-	}
-	var manifest recipeFile
-	if err := toml.Unmarshal(content, &manifest); err != nil {
-		return "", fmt.Errorf("`%s` is not valid TOML: %v", manifestPath, err)
 	}
 	if manifest.Recipe.Name != name {
 		return "", fmt.Errorf("`%s` declares the name `%s`, expected `%s`", manifestPath, manifest.Recipe.Name, name)
@@ -151,6 +147,45 @@ func publish(name string, file string, fields map[string]string, author string, 
 		return "", err
 	}
 	return fmt.Sprintf("✅ `%s` was %s.\n\nInstall it with:\n\n```sh\nnwm server create my-server --recipe %s\n```\n\nVersions come from git tags like `v1.0.0` in %s.", name, verb, name, repository), nil
+}
+
+func loadRecipe(owner string, repository string, subdir string) (recipeFile, string, error) {
+	var manifest recipeFile
+	dslPath := path.Join(subdir, "Recipefile")
+	if content, err := githubContent(owner, repository, dslPath); err == nil {
+		return parseRecipefile(string(content)), dslPath, nil
+	}
+	tomlPath := path.Join(subdir, "recipe.toml")
+	content, err := githubContent(owner, repository, tomlPath)
+	if err != nil {
+		return manifest, tomlPath, fmt.Errorf("neither `%s` nor `%s` was found in %s/%s, is the repository public and pushed?", dslPath, tomlPath, owner, repository)
+	}
+	if err := toml.Unmarshal(content, &manifest); err != nil {
+		return manifest, tomlPath, fmt.Errorf("`%s` is not valid TOML: %v", tomlPath, err)
+	}
+	return manifest, tomlPath, nil
+}
+
+func parseRecipefile(content string) recipeFile {
+	var manifest recipeFile
+	for _, line := range strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n") {
+		keyword, rest, _ := strings.Cut(strings.TrimSpace(line), " ")
+		rest = strings.TrimSpace(rest)
+		switch keyword {
+		case "recipe":
+			manifest.Recipe.Name = strings.ToLower(strings.Fields(rest + " ")[0])
+		case "description":
+			if unquoted, err := strconv.Unquote(rest); err == nil {
+				rest = unquoted
+			}
+			manifest.Recipe.Description = strings.Trim(rest, "'")
+		case "keywords":
+			for _, keyword := range strings.Fields(rest) {
+				manifest.Recipe.Keywords = append(manifest.Recipe.Keywords, strings.Trim(keyword, `"'`))
+			}
+		}
+	}
+	return manifest
 }
 
 func authorize(scope string, author string, existing *entry) error {

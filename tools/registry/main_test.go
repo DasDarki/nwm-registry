@@ -12,3 +12,10 @@ func TestParseIssue(t *testing.T) {
 		t.Errorf("unexpected optional fields: %v", fields)
 	}
 }
+
+func TestParseRecipefile(t *testing.T) {
+	manifest := parseRecipefile("# comment\nrecipe @dasdarki/rp 1.0.0\ndescription \"Roleplay server\"\nkeywords rp db\npackage sandbox\n")
+	if manifest.Recipe.Name != "@dasdarki/rp" || manifest.Recipe.Description != "Roleplay server" || len(manifest.Recipe.Keywords) != 2 {
+		t.Errorf("unexpected manifest: %+v", manifest.Recipe)
+	}
+}

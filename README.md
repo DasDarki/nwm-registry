@@ -13,7 +13,7 @@ nwm server create rp --recipe @dasdarki/roleplay@^1
 
 ## Publishing
 
-1. Put a `recipe.toml` with a scoped name like `@your-login/my-recipe` into a public GitHub repository
+1. Put a `Recipefile` (or `recipe.toml`) with a scoped name like `@your-login/my-recipe` into a public GitHub repository
    (at the root or in a subdirectory).
 2. Run `nwm recipe publish` inside it. This opens an issue here, using the `gh` CLI if available.
 3. The bot validates the request, adds `recipes/<scope>/<name>.json`, rebuilds `index.json` and closes the issue.

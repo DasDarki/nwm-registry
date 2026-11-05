@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Usually created by `nwm recipe publish`. The bot checks that the repository contains a matching
-        `recipe.toml` and that you own the scope (your GitHub login or an organization you publicly belong to).
+        `Recipefile` or `recipe.toml` and that you own the scope (your GitHub login or an organization you publicly belong to).
   - type: input
     id: name
     attributes:
