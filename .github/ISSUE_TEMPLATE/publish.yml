@@ -1,0 +1,38 @@
+name: Publish a recipe
+description: Add or update a recipe in the nwm registry
+title: "[publish] "
+labels: [publish]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usually created by `nwm recipe publish`. The bot checks that the repository contains a matching
+        `recipe.toml` and that you own the scope (your GitHub login or an organization you publicly belong to).
+  - type: input
+    id: name
+    attributes:
+      label: Recipe name
+      placeholder: "@your-login/my-recipe"
+    validations:
+      required: true
+  - type: input
+    id: repository
+    attributes:
+      label: Repository
+      placeholder: https://github.com/your-login/my-recipe
+    validations:
+      required: true
+  - type: input
+    id: subdir
+    attributes:
+      label: Subdirectory
+      description: Folder containing recipe.toml, empty for the repository root
+  - type: input
+    id: description
+    attributes:
+      label: Description
+  - type: input
+    id: keywords
+    attributes:
+      label: Keywords
+      placeholder: roleplay, postgres, nanossharp

@@ -1,0 +1,14 @@
+package main
+
+import "testing"
+
+func TestParseIssue(t *testing.T) {
+	body := "### Recipe name\n\n@dasdarki/rp\n\n### Repository\n\nhttps://github.com/DasDarki/rp\n\n### Subdirectory\n\n_No response_\n\n### Keywords\n\nrp, db\n"
+	fields := parseIssue(body)
+	if fields["Recipe name"] != "@dasdarki/rp" || fields["Repository"] != "https://github.com/DasDarki/rp" {
+		t.Errorf("unexpected fields: %v", fields)
+	}
+	if fields["Subdirectory"] != "" || fields["Keywords"] != "rp, db" {
+		t.Errorf("unexpected optional fields: %v", fields)
+	}
+}

@@ -1,0 +1,61 @@
+name: process request
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: registry
+  cancel-in-progress: false
+
+jobs:
+  process:
+    if: startsWith(github.event.issue.title, '[publish]') || startsWith(github.event.issue.title, '[unpublish]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - id: run
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT_FILE: ${{ runner.temp }}/result.md
+        run: |
+          action=publish
+          if [[ "$ISSUE_TITLE" == "[unpublish]"* ]]; then action=unpublish; fi
+          if go run ./tools/registry "$action"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.run.outputs.ok == 'true'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "nwm-registry[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A recipes index.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: apply registry request #$ISSUE_NUMBER"
+            git push
+          fi
+      - if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          RESULT_FILE: ${{ runner.temp }}/result.md
+          OK: ${{ steps.run.outputs.ok }}
+        run: |
+          if [ ! -s "$RESULT_FILE" ]; then echo "The request could not be processed, see the workflow logs." > "$RESULT_FILE"; fi
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RESULT_FILE"
+          if [ "$OK" = "true" ]; then
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+          fi

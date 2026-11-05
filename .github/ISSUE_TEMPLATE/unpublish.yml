@@ -1,0 +1,12 @@
+name: Unpublish a recipe
+description: Remove a recipe you own from the nwm registry
+title: "[unpublish] "
+labels: [unpublish]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Recipe name
+      placeholder: "@your-login/my-recipe"
+    validations:
+      required: true
